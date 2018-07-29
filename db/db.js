@@ -47,9 +47,10 @@ var StoreDeviceId= orm.define('StoreDeviceId', {
 
 
 var PublisherTemp= orm.define('PublisherTemp',{
-   email: { type: Sequelize.STRING, allowNull: false, unique: true, primaryKey:true},
+  email: { type: Sequelize.STRING, allowNull: false, unique: true, primaryKey:true},
+  username:{ type: Sequelize.STRING, allowNull: false, unique: true},
   password: { type: Sequelize.STRING, allowNull: false },
-   token :{type: Sequelize.INTEGER, allowNull: false}
+  token :{type: Sequelize.INTEGER, allowNull: false}
 })
 
 
@@ -96,7 +97,8 @@ var Publisher = orm.define('Publisher', {
 
 var PlayerGame = orm.define('PlayerGame', {
   gameId: { type: Sequelize.STRING, allowNull: false },
-  playerId: { type: Sequelize.STRING, allowNull: false },
+  //playerId: { type: Sequelize.STRING, allowNull: false },
+  //username:{ type: Sequelize.STRING, allowNull: false },
   country:{type: Sequelize.STRING, allowNull: false}
 });
 
@@ -207,6 +209,7 @@ Participant.belongsTo(PublisherTemp);
 
 Balance.belongsTo(PublisherTemp, {as:'user'});
 StoreDeviceId.belongsTo(PublisherTemp, { as: 'user' });
+PlayerGame.belongsTo(PublisherTemp, { as: 'user' });
 PublisherDetails.belongsTo(Publisher, { as: 'Publisher' });
 Dare.belongsTo(PublisherTemp, {as: 'from'});
 Dare.belongsTo(PublisherTemp, {as: 'to'});
@@ -214,7 +217,6 @@ Dare.belongsTo(PublisherTemp, {as: 'to'});
 Promise.all([
   Publisher.sync(),
   PastMatch.sync(),
-  PlayerGame.sync(),
   PublisherTemp.sync(),
   GamesDetails.sync(),
   LeagueDetails.sync(),
@@ -227,6 +229,7 @@ Promise.all([
   Balance.sync();
   tournamentMatch.sync();
   Participant.sync();
+  PlayerGame.sync();
   return Participant.sync();
   return PublisherDetails.sync();
   
