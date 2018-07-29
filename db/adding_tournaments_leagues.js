@@ -5,16 +5,16 @@ var express= require('express');
 
 var tournament1=  {
 	gameId:"Mario@domilgarg37@gmail.com",
-	tournamentId: "tournament1",
-	tournamentName:"Spirit Of India",
+	tournamentId: "tournament2",
+	tournamentName:"Play and Win",
 	 payout:"300 200 50",
 	status:"Inprogress",
-	startTime:"23 Jun 2018 18:00:00",
-	spotsLeft:20,
+	startTime:"23 August 2018 18:00:00",
+	spotsLeft:16,
 	fee:40,
 	winners:"if any",
 	rules:"tournament will be conducted between 6 and 9 pm ",
-	registrationEndDate:"12 Jun 2018 18:00:00"
+	registrationEndDate:"12 August 2018 18:00:00"
 };
 
 var league1= {
@@ -24,11 +24,11 @@ var league1= {
    payout: "300 20 10",
    fee:200,
    status:"Upcoming",
-   startTime:"24 Jun 2018 18:00:00",
+   startTime:"24 August 2018 18:00:00",
    spotsLeft:40,
    winners:"if any",
    rules:"Play at your pace but within timelines",
-   registrationEndDate:"12 Jun 2018 18:00:00"
+   registrationEndDate:"12 August 2018 18:00:00"
 };
 
 //a@b.com
@@ -39,8 +39,8 @@ var participants  = {
 }
 
 
-db.Participant.create(participants);
-//db.Tournament.create(tournament1)
+//db.Participant.create(participants);
+db.Tournament.create(tournament1)
 // return Promise.all([
 // 	db.Tournament.create(tournament1),
 // 	db.LeagueDetails.create(league1)
