@@ -10,12 +10,14 @@ module.exports = {
   
   allMatches: function(req, res, next) {
     console.log('Hey I am running');
-    db.tournamentMatch.findAll({//include: [
+    db.tournamentMatch.findAll({
+      attributes:{exclude:['createdAt','TournamentTournamentId', 'updatedAt','ParentId','PlayerOneEmail','PlayerTwoEmail']},
+      include: [
       //db.Tournament, 
-      //{ model: db.PublisherTemp, as: 'Winner' },
-     // { model: db.PublisherTemp, as: 'PlayerOne' },
-      //{ model: db.PublisherTemp, as: 'PlayerTwo' }
-   // ],
+      { model: db.PublisherTemp, as: 'Winner',attributes:['username','email'] },
+      { model: db.PublisherTemp, as: 'PlayerOne',attributes:['username','email'] },
+      { model: db.PublisherTemp, as: 'PlayerTwo' , attributes:['username','email']}
+    ],
      where:{TournamentTournamentId:req.query.tournamentId}})
     .then(function(matches){
       var matches = JSON.stringify(matches);

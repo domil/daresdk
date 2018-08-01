@@ -1,3 +1,6 @@
+//image link
+//https://storage.googleapis.com/streaming-208913/15315658879531.jpg
+
 var db = require('./db/db.js');
 var bluebird = require('bluebird');
 var jwt = require('jsonwebtoken');
@@ -55,6 +58,7 @@ app.post('/register',(req,res)=>{
 
 app.post('/signup', function(req,res){
 	var email= req.body.email;
+  var username = req.body.username;
 	var password= req.body.password;
 	var rand=Math.floor((Math.random() * 100) + 54);
 	var host=req.get('host');
@@ -81,6 +85,7 @@ password=hash;
 db.PublisherTemp.findOrCreate({ where: {  
                                   email: email, 
                                   password: password,
+                                  username:username,
                                   token:rand } })
     
     .then(function (publisher) {
@@ -92,7 +97,8 @@ db.PublisherTemp.findOrCreate({ where: {
            let mystr = mykey.update(req.query.gameKey, 'hex', 'utf8') + mykey.final('utf8')
            
            db.PlayerGame.findOrCreate({where:{gameId:mystr,
-                              playerId:email}})
+                              userEmail:email,
+                              }})
              .then(function (user) {
              console.log("created user ",user);
             res.send(js2xmlparser.parse("Authenticate", output1));
@@ -154,7 +160,8 @@ app.post('/login',(req,res)=>{
               return Promise.all([
               db.StoreDeviceId.create(deviceinfo),
               db.PlayerGame.findOrCreate({where:{gameId:mystr,
-                              playerId:email ,country:"India" }})
+                              userEmail:email ,country:"India",
+                               }})
               ])
           } else{
              console.log("found user ",user);

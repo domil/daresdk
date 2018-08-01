@@ -8,7 +8,7 @@ var js2xmlparser = require("js2xmlparser");
 var router = express.Router();
 
 //playerId, gameKey, tournamentId,  
-router.get('/join',jwtauth,(req,res)=>{
+router.post('/join',jwtauth,(req,res)=>{
 	var balance; var fee;
 	var playerId = req.userData.email;
 	var gameKey = req.query.gameKey;

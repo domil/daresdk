@@ -20,8 +20,8 @@ router.get('/gameKey',(req,res) => {
 			var mykey = crypto.createDecipher('aes-128-cbc', 'mypassword');
 			var mystr = mykey.update(gameKey, 'hex', 'utf8') + mykey.final('utf8')
 			return Promise.all([
-			db.Tournament.findAll({where:{gameId:mystr}}),
-			db.LeagueDetails.findAll({where:{gameId:mystr}})
+			db.Tournament.findAll({attributes:{exclude:['createdAt','updatedAt']},where:{gameId:mystr}}),
+			db.LeagueDetails.findAll({attributes:{exclude:['createdAt','updatedAt']},where:{gameId:mystr}})
 			])
 			.then(function(results){
 				if(!results){
@@ -63,7 +63,7 @@ router.get('/getplayers',(req,res)=>{
   var gameKey = req.query.gameKey;
   var mykey = crypto.createDecipher('aes-128-cbc', 'mypassword');
   var mystr = mykey.update(gameKey, 'hex', 'utf8') + mykey.final('utf8')
- db.PlayerGame.findAll({ attributes: ['playerId', 'country'],where:{gameID: mystr}})
+ db.PlayerGame.findAll({ attributes: ['country'],include:[{model:db.PublisherTemp,as:'user',attributes:['username','email']}],where:{gameID: mystr}})
  .then(function(players){
     console.log('**********************');
 			var players=JSON.stringify(players);
@@ -82,7 +82,6 @@ router.post('/registerGame',jwtauth,function(req,res){
 var gameId = req.body.gameName + "@" + req.userData.email;
 var mykey = crypto.createCipher('aes-128-cbc', 'mypassword');
 var mystr = mykey.update(gameId, 'utf8', 'hex')+ mykey.final('hex');
-
 var newGame={
 gameId:gameId,	
 publisherId: req.userData.email, 
@@ -106,7 +105,6 @@ db.GamesDetails.create(newGame)
 	res.send(error);
 	console.log(error)
 })
-
 })
 
 router.get('/',(req,res)=>{
@@ -120,30 +118,35 @@ router.get('/',(req,res)=>{
 	})
 })
 
-// var score = {
-// 	matcheId:1,
-// 	Team1score:21,
-// 	Team2score:20,
-// 	team1playerscores:{player1:21,player2:10},
-// 	team2playerscores:{player1:21,player2:10},
-// }
+
 router.post('/score', (req,res)=>{
     var matchId = req.query.matchid;
-	var team1Score = req.body.p1Score;
-	var team2Score = req.body.p2Score;
+	var keys = Object.keys(req.body);
+	var values = Object.values(req.body);
+	
 	db.Match.find({where:{roomId:matchId}})
 	.then(function(match){
 		if(match.count==0){
+			if(keys.indexOf(match.team1Id) > 0 && keys.indexOf(match.team2Id) > 0)
+			{
 			match.updateAttributes(
-				{team1Score:team1Score,
-					team2Score:team2Score,
+				{team1Score: values[keys.indexOf(match.team1Id)],
+					team2Score:values[keys.indexOf(match.team2Id)],
 					count:match.count+1}
 			);
 			let output= {message:'Scores saved'}
-			res.send(js2xmlparser.parse("List", output));		
+			res.send(js2xmlparser.parse("List", output));	
+			}
+			else{
+				let output= {message:'These players are not playing'}
+			res.send(js2xmlparser.parse("List", output));
+			}
+				
+				
 		} else{
-		if(match.team1Score==team1Score && match.team2Score==team2Score){
-            match.updateAttributes(
+		//if(match.team1Score==team1Score && match.team2Score==team2Score){
+         if(match.team1Score== values && match.team2Score==team2Score){
+		    match.updateAttributes(
 				{
 					count:match.count+1}
 			);
