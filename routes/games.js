@@ -7,7 +7,8 @@ var js2xmlparser = require("js2xmlparser");
 
 var router = express.Router();
 var options = {compact: true, ignoreComment: true, spaces: 4};
-router.get('/gameKey',(req,res) => {
+router.get('/gameKey',jwtauth,(req,res) => {
+	var userEmail = req.userData.email;
 	var gameKey= req.query.key;
 	db.GamesDetails.find({where:{gameKey:gameKey}})
 	.then(function(game){
@@ -21,7 +22,8 @@ router.get('/gameKey',(req,res) => {
 			var mystr = mykey.update(gameKey, 'hex', 'utf8') + mykey.final('utf8')
 			return Promise.all([
 			db.Tournament.findAll({attributes:{exclude:['createdAt','updatedAt']},where:{gameId:mystr}}),
-			db.LeagueDetails.findAll({attributes:{exclude:['createdAt','updatedAt']},where:{gameId:mystr}})
+			db.LeagueDetails.findAll({attributes:{exclude:['createdAt','updatedAt']},where:{gameId:mystr}}),
+			db.Participant.findAll({attributes:['TournamentTournamentId'],where:{publisherTempEmail:userEmail}})
 			])
 			.then(function(results){
 				if(!results){
@@ -29,21 +31,58 @@ router.get('/gameKey',(req,res) => {
 					//res.send(convert.js2xml(output, options))
 				res.send(js2xmlparser.parse("List", output));
 				}
-				
+			var ids = results[2];
+			ids = JSON.stringify(ids);
+			ids = JSON.parse(ids);
+			ids = ids.map(function(id){
+				return id.TournamentTournamentId;
+			})	
+			console.log('ids*********',ids);
 			console.log('**********************');
 			var tournaments=results[0];
 			tournaments=JSON.stringify(tournaments);
 			tournaments=JSON.parse(tournaments);
-			//var c= {Tournament:tournaments};
-			console.log(tournaments);
-			console.log('**********************');
+			console.log('********', tournaments);
+			var joinedt = [];
+			var njoinedt = [];
+			var tournamentss = tournaments.map(function(tournament){
+				if(ids.includes(tournament.tournamentId)){
+					tournament.joined = true;
+					joinedt.push(tournament);
+					return tournament;
+				} else{
+					tournament.joined = false;
+					njoinedt.push(tournament);
+					return tournament;
+				}
+			})
+			
+			var joinedl = [];
+			var njoinedl = [];
 			var leagues=results[1];
 			leagues=JSON.stringify(leagues);
 			leagues=JSON.parse(leagues);
+			
+			var leaguess = leagues.map(function(league){
+				if(ids.includes(league.leagueId)){
+					league.joined = true;
+					joinedl.push(league);
+					return league;
+				} else{
+					league.joined = false;
+					njoinedl.push(league);
+					return league;
+				}
+			})
+			
+			//var c= {Tournament:tournaments};
+			console.log(tournamentss);
+			console.log('**********************');
+			
 			//var c= {Tournament:tournaments};
 			console.log(leagues);
 			
-			var jsdata= {tournaments:tournaments, leagues:leagues};
+			var jsdata= {joinedtournaments:joinedt, notjoinedtournaments:njoinedt, joinedleagues:joinedl, notjoinedleagues:njoinedl };
 			console.log(convert.js2xml(jsdata, options));
 			//res.send(convert.js2xml(jsdata, options)) 
 			res.send(js2xmlparser.parse("List", jsdata));
@@ -148,7 +187,8 @@ router.post('/score', (req,res)=>{
          if(match.team1Score== values && match.team2Score==team2Score){
 		    match.updateAttributes(
 				{
-					count:match.count+1}
+					count:match.count+1
+					}
 			);
 			var match = JSON.stringify(match);
 		    var match = JSON.parse(match);

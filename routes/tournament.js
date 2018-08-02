@@ -44,6 +44,15 @@ router.post('/join',jwtauth,(req,res)=>{
 })
 
 
+router.get('/tournaments',jwtauth, (req,res)=>{
+	var playerId = req.userData.email;
+	db.Participant.findAll({where:{PublisherTempEmail:playerId}})
+	.then(function(tournament){
+		res.send(tournament);
+	})
+})
+
+
 function newbalance(playerId, money,tournamentId){
 	//return Promise(function(resolve,reject){
 		db.Participant.findOrCreate( { where : {

@@ -109,7 +109,7 @@ router.get('/dare',jwtauth,(req,res)=>{
 			  toEmail: playerId,
 			  gameId:mystr,
               dareAmount:dareAmount
-						    }});
+				 }});
             //   let list = {result:'just testing'}
             // res.send(js2xmlparser.parse("Result", list));
             
