@@ -1,0 +1,27 @@
+{
+  "name": "publisher_create_leagues",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.6.1",
+    "bcrypt-nodejs": "0.0.3",
+    "bcryptjs": "^2.4.3",
+    "bluebird": "^3.5.1",
+    "body-parser": "^1.18.3",
+    "express": "^4.16.3",
+    "js2xmlparser": "^3.0.0",
+    "jsonwebtoken": "^8.3.0",
+    "mysql2": "^1.5.3",
+    "nodemailer": "^4.6.7",
+    "request": "^2.87.0",
+    "sequelize": "^4.37.10",
+    "xml-js": "^1.6.4"
+  }
+}

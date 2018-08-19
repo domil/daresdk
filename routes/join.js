@@ -8,9 +8,9 @@ var request = require('request');
 var uuid = require('uuid/v4');
 var Sequelize = require('sequelize');
 const Op = Sequelize.Op;
-const operatorsAliases = {
-  $between: Op.between 
-}
+// const operatorsAliases = {
+//   $between: Op.between 
+// }
 
 var options = {compact: true, ignoreComment: true, spaces: 4};
 
@@ -24,6 +24,7 @@ function balancecheck(){
 router.get('/balance',jwtauth,(req,res)=>{
     db.Balance.find({where:{userEmail:req.userData.email}})
     .then(function(user){
+
         let output= {balance:user.balance}
 	//res.send(convert.js2xml(output, options));
      res.send(js2xmlparser.parse("Balance", output));  
@@ -134,6 +135,9 @@ router.get('/dare',jwtauth,(req,res)=>{
         "title": " Dare Invitation ",
         "body": req.userData.email
     },
+    "android":{
+        "ttl":"450s"
+    },
     "data": {
         "balanceStatus":false,
         "dareId": dareId,
@@ -142,8 +146,9 @@ router.get('/dare',jwtauth,(req,res)=>{
         "amount": tob
     }
 }   
-     var dataNew = to.balance >= dareAmount?data:data2
-		sendToAll( dataNew, deviceId, res, dareId); 
+    // var dataNew = to.balance >= dareAmount?data:data2
+    var dataNew = to.balance >= dareAmount?data:data2
+    sendToAll( dataNew, deviceId, res, dareId); 
 		}
 	})
 	
@@ -250,6 +255,7 @@ router.get('/dare/accept',(req,res)=>{
         "title": "Open game and play",
         "body": " Dare Accepted"
     },
+    
     "data": {
         "message":"Accepted",
         "roomId": matchId,
@@ -408,23 +414,49 @@ function sendNotification(data){
     })
 }
 
-module.exports= router;
+
+router.get('/newtime',(req,res)=>{
+    var date = new Date();
+    var sec = parseInt(req.query.sec);
+    var newmin = date.getSeconds() + sec ;
+    date.setSeconds(newmin);
+    console.log(date);
+    db.tournamentMatch.find({where:{PlayerOneEmail:"b@c.d" , PlayerTwoEmail:"a@b.c" }})
+    .then(function(match){
+        if(match){
+        console.log('starttimedate', match.startTime);
+        console.log('date ===',date);
+        console.log('finded ', match);
+        match.updateAttributes({startTime:date})
+        res.send(` match time set ${date}`);
+        } else{
+            res.send('No match found');
+        }
+    })
+})
 
 
 
 
 
 
-var endDate = new Date('2018-08-23T18:11:00.0000000+00:00')
-var startDate = new Date('2018-08-23T18:00:00.0000000+00:00')
 var a =3;
 console.log(a);
 setInterval(function(){
-    db.tournamentMatch.findAll({attributes:['id','PlayerOneEmail','PlayerTwoEmail','startTime'],where:{
-    startTime: {
-        $between: [startDate, endDate]
-    }
-}}).
+    // var startDate = '2018-08-04 12:30:00';
+    // var endDate = '2018-08-04 12:35:00';
+     var startDate = new Date().toISOString();
+     var endDate = new Date();
+     endDate.setSeconds(endDate.getSeconds() + 30);
+     endDate = endDate.toISOString()
+    console.log(`start Date ${startDate} endDate is ${endDate}`);
+    //var startDate = new Date('2018-08-23T18:00:00.0000000+00:00')
+    // db.tournamentMatch.findAll({attributes:['id','PlayerOneEmail','PlayerTwoEmail','startTime'],where:{
+    // startTime: {
+    //     $between: ['2018-08-22', '2018-08-25']
+    // }
+ //}}).
+ db.orm.query(`SELECT id,PlayerOneEmail,PlayerTwoEmail,startTime FROM tournamentMatches WHERE startTime BETWEEN '${startDate}' AND '${endDate}'` , { model: db.tournamentMatch }).
 then(function(results){
     console.log('getting results');
     var results = JSON.stringify(results);
@@ -440,7 +472,7 @@ then(function(results){
         console.log('deviceids ********', deviceid);
         if(deviceid.length <2){
             let list1 = {message:'Unable to notify both users'};
-            res.send(js2xmlparser.parse("Result", list1));
+            console.log(js2xmlparser.parse("Result", list1));
         }else{
             var deviceId = [];
              deviceId.push(deviceid[0].deviceId);
@@ -470,4 +502,11 @@ then(function(results){
         }
     })
 })
-},30000000);
+},30000);
+
+
+
+
+
+
+module.exports= router;

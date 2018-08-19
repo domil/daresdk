@@ -13,7 +13,8 @@ var router = express.Router();
   router.route('/')
     .get(MatchController.allMatches)
     .post(MatchController.generateBracket)
-    .put(MatchController.updateMatch);
+
+    router.post('/update',MatchController.updateMatch);
 
 
 

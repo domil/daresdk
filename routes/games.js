@@ -10,7 +10,7 @@ var options = {compact: true, ignoreComment: true, spaces: 4};
 router.get('/gameKey',jwtauth,(req,res) => {
 	var userEmail = req.userData.email;
 	var gameKey= req.query.key;
-	db.GamesDetails.find({where:{gameKey:gameKey}})
+	db.GamesDetails.find({ where:{gameKey:gameKey}})
 	.then(function(game){
 		if(!game){
 			//res.json({text:"invalid"})
@@ -23,7 +23,8 @@ router.get('/gameKey',jwtauth,(req,res) => {
 			return Promise.all([
 			db.Tournament.findAll({attributes:{exclude:['createdAt','updatedAt']},where:{gameId:mystr}}),
 			db.LeagueDetails.findAll({attributes:{exclude:['createdAt','updatedAt']},where:{gameId:mystr}}),
-			db.Participant.findAll({attributes:['TournamentTournamentId'],where:{publisherTempEmail:userEmail}})
+			db.Participant.findAll({attributes:['TournamentTournamentId'],where:{publisherTempEmail:userEmail}}),
+			db.LeagueScore.findAll({attributes:['leagueLeagueId'], where:{userEmail:userEmail}})
 			])
 			.then(function(results){
 				if(!results){
@@ -48,15 +49,23 @@ router.get('/gameKey',jwtauth,(req,res) => {
 			var tournamentss = tournaments.map(function(tournament){
 				if(ids.includes(tournament.tournamentId)){
 					tournament.joined = true;
+					tournament.type = "knockout"
 					joinedt.push(tournament);
 					return tournament;
 				} else{
 					tournament.joined = false;
+					tournament.type = "knockout";
 					njoinedt.push(tournament);
 					return tournament;
 				}
 			})
 			
+			var idss = results[3];
+			idss = JSON.stringify(idss);
+			idss = JSON.parse(idss);
+			idss = idss.map(function(id){
+				return id.leagueLeagueId;
+			})	
 			var joinedl = [];
 			var njoinedl = [];
 			var leagues=results[1];
@@ -64,7 +73,7 @@ router.get('/gameKey',jwtauth,(req,res) => {
 			leagues=JSON.parse(leagues);
 			
 			var leaguess = leagues.map(function(league){
-				if(ids.includes(league.leagueId)){
+				if(idss.includes(league.leagueId)){
 					league.joined = true;
 					joinedl.push(league);
 					return league;
@@ -157,19 +166,28 @@ router.get('/',(req,res)=>{
 	})
 })
 
+// dare Scores
 
-router.post('/score', (req,res)=>{
-    var matchId = req.query.matchid;
+//router.post('/score', (req,res)=>{
+  
+function dareScore(req,res){
+	var matchId = req.query.matchid;
 	var keys = Object.keys(req.body);
 	var values = Object.values(req.body);
-	
+	console.log('keys = ',keys)
+	console.log('req.body = ',req.body);
 	db.Match.find({where:{roomId:matchId}})
 	.then(function(match){
+		if(match) console.log('truetrue');
 		if(match.count==0){
-			if(keys.indexOf(match.team1Id) > 0 && keys.indexOf(match.team2Id) > 0)
+			console.log(keys.indexOf(match.team1Id),keys.indexOf(match.team2Id));
+			if(keys.indexOf(match.team1Id) >= 0 && keys.indexOf(match.team2Id) >= 0)
 			{
+			console.log('hey man getting value',match.team1Id, match.team2Id);
+			console.log(keys.indexOf(match.team1Id),keys.indexOf(match.team2Id));
 			match.updateAttributes(
-				{team1Score: values[keys.indexOf(match.team1Id)],
+				{
+					team1Score: values[keys.indexOf(match.team1Id)],
 					team2Score:values[keys.indexOf(match.team2Id)],
 					count:match.count+1}
 			);
@@ -182,9 +200,10 @@ router.post('/score', (req,res)=>{
 			}
 				
 				
-		} else{
+		} else if(match.count==1){
 		//if(match.team1Score==team1Score && match.team2Score==team2Score){
-         if(match.team1Score== values && match.team2Score==team2Score){
+		console.log(values[keys.indexOf(match.team1Id)],values[keys.indexOf(match.team2Id)]);
+         if(match.team1Score== values[keys.indexOf(match.team1Id)] && match.team2Score==values[keys.indexOf(match.team2Id)]){
 		    match.updateAttributes(
 				{
 					count:match.count+1
@@ -193,7 +212,7 @@ router.post('/score', (req,res)=>{
 			var match = JSON.stringify(match);
 		    var match = JSON.parse(match);
 		      
-		if(team1Score>team2Score){
+		if(match.team1Score>match.team2Score){
 			match.winner = match.team1Id;
 		} else{
 			match.winner = match.team2Id;
@@ -211,13 +230,20 @@ router.post('/score', (req,res)=>{
 			let output= {message:"Scores doesnt match"}
 			res.send(js2xmlparser.parse("List", output));			
 		}
+		}
+		else{
+			let output= {message:"Scores already saved"}
+			res.send(js2xmlparser.parse("List", output));	
 		}	
 	})
 	.catch(function(err){
+		console.log('error is', err);
 		let output= {message:"Something went wrong. Try again."}
 			res.send(js2xmlparser.parse("List", output));			
 	
 	})
 	
-})
-module.exports=router
+}
+
+exports.router=router;
+exports.dareScore = dareScore;

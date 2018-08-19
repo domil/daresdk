@@ -6,12 +6,14 @@ var bluebird = require('bluebird');
 var jwt = require('jsonwebtoken');
 var bcrypt = require('bcryptjs');
 var bodyparser= require('body-parser')
+var jwtauth = require('./helpers/jwt-verify')
 var express= require('express');
 var nodemailer = require('nodemailer');
 var games= require('./routes/games');
 var tournament= require('./routes/tournament');
-var participants= require('./routes/participants.js');
-var android= require('./routes/android');
+var participants = require('./routes/participants.js');
+var android = require('./routes/android');
+var league = require('./routes/league');
 var matchroutes= require('./routes/matchroutes');
 var join= require('./routes/join');
 var convert=require("xml-js");
@@ -24,14 +26,15 @@ app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({extended:true}));
 
 
-app.use('/games',games);
+app.use('/games',games.router);
 app.use('/stream',android);
 app.use('/matches',matchroutes);
 app.use('/join', join);
+app.use('/league', league.router);
 
 
 app.use('/participants', participants);
-app.use('/tournament', tournament);
+app.use('/tournament', tournament.router);
 
 var convert=require("xml-js");
 var transporter = nodemailer.createTransport({
@@ -138,7 +141,7 @@ app.post('/login',(req,res)=>{
             {
               expiresIn: "10h"
             });
-         let output1={ Authenticated: true, token: token1,Tournaments:["tournament1"], Leagues:["league1"]};
+         let output1={ Authenticated: true, token: token1,username:publisher.username};
        // res.send(convert.js2xml(output1, options));
          if (req.query.gameKey) {
            var mykey = crypto.createDecipher('aes-128-cbc', 'mypassword');
@@ -201,7 +204,21 @@ app.post('/login',(req,res)=>{
   })
 })
 
-
+app.post('/score',jwtauth,(req,res)=>{
+  var matchId = req.query.matchid;
+  if(matchId[0] == "D"){
+     games.dareScore(req,res)
+  }else if(matchId[0]=="T"){
+    tournament.tournamentScore(req,res);
+  }else if(matchId[0] == "L"){
+    league.leagueScore(req,res);
+  }else{
+    console.log(matchid);
+    let list1 = {message:'MatchId incorrect'};
+    res.send(js2xmlparser.parse("Result", list1));
+  }
+    
+})
 
 
 
@@ -374,7 +391,7 @@ app.get('/verify',function(req,res){
   }
 });
 
-var port = process.env.port || 1337;
+var port = process.env.PORT || 1337;
 app.listen(port,() => {
   console.log('listening', port);
 });

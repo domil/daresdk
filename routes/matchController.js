@@ -11,7 +11,7 @@ module.exports = {
   allMatches: function(req, res, next) {
     console.log('Hey I am running');
     db.tournamentMatch.findAll({
-      attributes:{exclude:['createdAt','TournamentTournamentId', 'updatedAt','ParentId','PlayerOneEmail','PlayerTwoEmail']},
+      attributes:{exclude:['createdAt', 'updatedAt',,'PlayerOneEmail','PlayerTwoEmail']},
       include: [
       //db.Tournament, 
       { model: db.PublisherTemp, as: 'Winner',attributes:['username','email'] },
@@ -22,6 +22,24 @@ module.exports = {
     .then(function(matches){
       var matches = JSON.stringify(matches);
       matches = JSON.parse(matches);
+
+      console.log('2345645678',matches);
+
+      var matches1 = matches.map(function(match){
+        match.players = {};
+        match.type = 'knockout'
+        match.players.PlayerOne = match.PlayerOne ;
+        match.players.PlayerTwo = match.PlayerTwo;
+        delete match.PlayerOne ;
+        delete match.PlayerTwo ;
+        return match;
+      })
+      console.log('matches1*****', matches1);
+      
+      matches = matches1;
+
+      console.log('mathes134589109384', matches);
+
       var jsdata= {matches:matches};
 			//console.log(convert.js2xml(jsdata, options));
 			//res.send(convert.js2xml(jsdata, options)) 
@@ -30,15 +48,20 @@ module.exports = {
     });
   },
 
-  updateMatch: function(req, res, next) {
-
+  //updateMatch: function(req, res, next) {
+   updateMatch: function(parameters){
     // If the tournament is completed
       // you can't do anything anymore
     // otherwise you can update the stuff
+   console.log('inside update match will work on it. Go on');
+    // var updateMatch = req.body[0];
+    // var updateWinner = req.body[1];
+    // var matchIndex = req.body[2];
+    var updateMatch = parameters[0];
+    var updateWinner = parameters[1];
+    var matchIndex = parameters[2];
 
-    var updateMatch = req.body[0];
-    var updateWinner = req.body[1];
-    var matchIndex = req.body[2];
+
     //var numberRounds = req.body[3];
 
     //console.log(numberRounds);
@@ -96,7 +119,12 @@ module.exports = {
           { model: db.PublisherTemp, as: 'PlayerTwo' }
           ]})
           .then(function(matches){
-            res.status(200).send(matches);
+           // res.status(200).send(matches);
+           return ;
+          })
+          .catch(function(error){
+            console.log('Something went wrong', error);
+            return ;
           });
         });
         

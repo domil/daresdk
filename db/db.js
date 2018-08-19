@@ -1,3 +1,4 @@
+// image url https://storage.googleapis.com/streaming-208913/15315658879531.jpg
 //var logic = require('./logic');
 //var dbconfig = require('../config/dbconfig.js');
 var Sequelize = require('sequelize');
@@ -6,24 +7,69 @@ var Sequelize = require('sequelize');
 //var dbuser = dbconfig.production.username || dbconfig.development.username;
 //var dbpw = dbconfig.production.password || dbconfig.development.password;
 
-var orm = new Sequelize('sql_testing', 'domil@sqlserverd', 'qwert12345!', {
-  host: 'sqlserverd.database.windows.net',
-  dialect: 'mssql',
-  driver: 'tedious',
-  options: {
-    encrypt: true,
-    database: 'sql_testing'
-  },
-  port: 1433,
+// var orm = new Sequelize('sql_testing', 'domil@sqlserverd', 'qwert12345!', {
+//   host: 'sqlserverd.database.windows.net',
+//   dialect: 'mssql',
+//   driver: 'tedious',
+//   options: {
+//     encrypt: true,
+//     database: 'sql_testing'
+//   },
+//   port: 1433,
+//   pool: {
+//     max: 5,
+//     min: 0,
+//     idle: 10000
+//   },
+//   dialectOptions: {
+//     encrypt: true
+//   }
+// });
+
+
+// Google cloud sequelize connection local
+
+// const orm = new Sequelize('sdk', 'domil', 'qwert12345', {
+//   //timezone:'+05:30',
+//   host: '127.0.0.1',
+//   dialect: 'mysql',
+//   operatorsAliases: false,
+
+//   pool: {
+//     max: 5,
+//     min: 0,
+//     acquire: 30000,
+//     idle: 10000
+//   },
+// });
+
+// var timeExp = orm.define('timeExp',{
+//   startTime: { 
+//     type: Sequelize.DATE, 
+//          defaultValue: Sequelize.NOW 
+// }
+// })
+
+
+// google cloud connection after deployed on cloud
+const orm = new Sequelize('sdk', 'domil', 'qwert12345', {
+  // host: '10.128.0.2',
+host:'localhost', 
+ dialect: 'mysql',
+  operatorsAliases: false,
+  dialectOptions: {
+      socketPath: '/cloudsql/daressdk:asia-south1:daresdk'
+      },
   pool: {
     max: 5,
     min: 0,
+    acquire: 30000,
     idle: 10000
   },
-  dialectOptions: {
-    encrypt: true
-  }
 });
+
+
+
 
 var Promise = require('bluebird');
 var bcrypt = require('bcrypt-nodejs');
@@ -66,9 +112,42 @@ var tournamentMatch = orm.define('tournamentMatch', {
   startTime: { 
     type: Sequelize.DATE, 
          defaultValue: Sequelize.NOW 
-}
+},
+  team1Score:{type: Sequelize.INTEGER, allowNull: true,defaultValue:0},
+  team2Score:{type: Sequelize.INTEGER, allowNull: true,defaultValue:0},
+  count:{type: Sequelize.INTEGER,allowNull: true,defaultValue:0}
 });
 
+
+var LeagueScore = orm.define('LeagueScore',{
+  roomId:{type: Sequelize.STRING, allowNull: false, unique: true,primaryKey:true},
+  Score1:{type: Sequelize.INTEGER, allowNull: true,defaultValue:0},
+  Score1Time: { 
+    type: Sequelize.DATE, 
+         defaultValue: Sequelize.NOW 
+},
+  Score2:{type: Sequelize.INTEGER, allowNull: true,defaultValue:0},
+  Score2Time: { 
+    type: Sequelize.DATE, 
+         defaultValue: Sequelize.NOW 
+},
+  Score3:{type: Sequelize.INTEGER, allowNull: true,defaultValue:0},
+  Score3Time: { 
+    type: Sequelize.DATE, 
+         defaultValue: Sequelize.NOW 
+},
+  count:{type: Sequelize.INTEGER, allowNull: true,defaultValue:0},
+  maxScore:{type: Sequelize.INTEGER, allowNull: true,defaultValue:0},
+  maxScoreTime: { 
+    type: Sequelize.DATE, 
+         defaultValue: Sequelize.NOW 
+}
+})
+
+// If feel necessary only then join
+// var LeagueJoin = orm.define('LeagueJoin',{
+
+// })
 
 var PublisherDetails= orm.define("PublisherDetails",{
   name: { type: Sequelize.STRING, allowNull: false },
@@ -204,6 +283,8 @@ tournamentMatch.belongsTo(tournamentMatch, { as: 'Parent'});
 tournamentMatch.belongsTo(PublisherTemp, { as: 'PlayerOne'});
 tournamentMatch.belongsTo(PublisherTemp, { as: 'PlayerTwo'});
 tournamentMatch.belongsTo(PublisherTemp, { as: 'Winner'});
+LeagueScore.belongsTo(PublisherTemp, {as:'user'});
+LeagueScore.belongsTo(LeagueDetails, {as:'league'});
 Participant.belongsTo(Tournament);
 Participant.belongsTo(PublisherTemp);
 
@@ -230,7 +311,8 @@ Promise.all([
   tournamentMatch.sync();
   Participant.sync();
   PlayerGame.sync();
-  return Participant.sync();
+  LeagueScore.sync();
+   Participant.sync();
   return PublisherDetails.sync();
   
 })
@@ -246,7 +328,7 @@ Promise.all([
 
 
 
-
+exports.orm = orm;
 exports.Publisher = Publisher;
 exports.PastMatch = PastMatch;
 exports.PublisherDetails = PublisherDetails ;
@@ -263,3 +345,4 @@ exports.Balance = Balance;
 exports.Participant = Participant;
 exports.tournamentMatch = tournamentMatch;
 exports.Participant = Participant;
+exports.LeagueScore = LeagueScore;
