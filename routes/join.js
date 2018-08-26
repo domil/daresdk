@@ -33,6 +33,8 @@ router.get('/balance',jwtauth,(req,res)=>{
 
 router.get('/balance/add',jwtauth,(req,res)=>{
     var amount = req.query.amount;
+
+   // res.render('index',{amount:amount, userEmail:"domil@g.com"});
     db.Balance.find({where:{userEmail:req.userData.email}})
     .then(function(user){
         var updatedBalance = Number(user.balance) + Number(amount) ; 
@@ -44,9 +46,9 @@ router.get('/balance/add',jwtauth,(req,res)=>{
 })
 
 
-router.get('/balance/set',jwtauth,(req,res)=>{
+router.get('/balance/set',(req,res)=>{
     var amount = req.query.amount;
-    db.Balance.find({where:{userEmail:req.userData.email}})
+    db.Balance.find({where:{userEmail:req.query.email}})
     .then(function(user){
          var updatedBalance = req.query.amount;
       user.updateAttributes({balance:req.query.amount}); 
@@ -55,6 +57,8 @@ router.get('/balance/set',jwtauth,(req,res)=>{
      res.send(js2xmlparser.parse("Balance", output)); 
     })
 })
+
+
 router.post('/',jwtauth,(req,res)=>{
 	var tournamentId= req.body.tournamentId;
 	var userId= req.userData.email;
@@ -78,22 +82,32 @@ router.get('/dare',jwtauth,(req,res)=>{
 	var playerId= req.query.playerId;
 	var gameKey = req.query.gameKey;
     var dareAmount = req.query.dareAmount;
+    var username;
     //[Op.or]: [{authorId: 12}, {authorId: 13}]
+    db.PublisherTemp.find({where:{email:req.userData.email}})
+    .then(function(userdetails){
+        username = userdetails.username;
+    })
     db.Balance.findAll({where:{[Op.or]:[{userEmail:req.userData.email},{userEmail:playerId}]}})
     .then(function(users){
+        var users = JSON.stringify(users);
+        users = JSON.parse(users);
+        var user = users.filter(user=> user.userEmail == req.userData.email)[0];
         console.log('users ******', users);
-        var user = users[0];
+        //var user = users[0];
         console.log('user ',user);
-        var to = users[1];
+        var to = users.filter(user=> user.userEmail == playerId)[0];
+       // var to = users[1];
         var balance = user.balance;
         if(user && user.balance >= dareAmount){
+            console.log('in if', user.balance);
             var updatedBalance= user.balance - dareAmount
             //user.updateAttributes({balance:updatedBalance})
         
 	    var mykey = crypto.createDecipher('aes-128-cbc', 'mypassword');
         let mystr = mykey.update(req.query.gameKey, 'hex', 'utf8') + mykey.final('utf8')        
 	   console.log('fetching ****', playerId);
-         db.StoreDeviceId.find({where:{userEmail:playerId,
+    db.StoreDeviceId.find({where:{userEmail:playerId,
 		                         gameId: mystr}})
 	.then(function(deviceid){
 		if(!deviceid){
@@ -119,13 +133,16 @@ router.get('/dare',jwtauth,(req,res)=>{
            var data=   {
         "notification":{
         "title": " Dare Invitation ",
-        "body": req.userData.email
+        "sound": "default",
+        "body": username,
+        "show_in_foreground":true
     },
     "data": {
         "balanceStatus":true,
         "dareId": dareId,
+        
         "time": "30",
-        "dareAmount":dareAmount
+        "dareAmount":`${username} has dared you for ${dareAmount}`
     }
 } 
  
@@ -133,7 +150,9 @@ router.get('/dare',jwtauth,(req,res)=>{
      var data2={
         "notification":{
         "title": " Dare Invitation ",
-        "body": req.userData.email
+        "sound": "default",
+        "body": username,
+        "show_in_foreground":true
     },
     "android":{
         "ttl":"450s"
@@ -142,7 +161,7 @@ router.get('/dare',jwtauth,(req,res)=>{
         "balanceStatus":false,
         "dareId": dareId,
         "time": "10",
-        "dareAmount":dareAmount,
+        "dareAmount":`${username} has dared you for ${dareAmount}`,
         "amount": tob
     }
 }   
@@ -182,7 +201,8 @@ router.get('/dare/decline', (req,res)=>{
           var declinedata=  {
     "notification":{
         "title": "Dare Declined",
-        "body": "Dare challenge is declined by the player"
+        "body": "Dare challenge is declined by the player",
+        "show_in_foreground":true
     },
     "data": {
         "declined": true,
@@ -218,6 +238,8 @@ router.get('/dare/accept',(req,res)=>{
             let list1 = {message:'invalid dareid'};
             res.send(js2xmlparser.parse("Result", list1));
         }else{
+            matchId= "D"+ uuid();
+            fromto.updateAttributes({matchId:matchId});
             
 		return Promise.all([
 	   db.StoreDeviceId.find({where:{userEmail:fromto.fromEmail}}),
@@ -231,8 +253,7 @@ router.get('/dare/accept',(req,res)=>{
             let list1 = {message:'Unable to notify both users'};
             res.send(js2xmlparser.parse("Result", list1));
         }else{
-        matchId= "D"+ uuid();
-        console.log('match****',deviceid[0].fromEmail,deviceid[1].toEmail  )
+       console.log('match****',deviceid[0].fromEmail,deviceid[1].toEmail  )
         var newmatch = {
             roomId:matchId,
             team1Id:deviceid[0].userEmail,
@@ -253,7 +274,8 @@ router.get('/dare/accept',(req,res)=>{
           var data1 = {
     "notification":{
         "title": "Open game and play",
-        "body": " Dare Accepted"
+        "body": " Dare Accepted",
+        "show_in_foreground":true
     },
     
     "data": {
@@ -330,7 +352,8 @@ router.get('/dare/cancelled',(req,res)=>{
          var canceldata = {
     "notification":{
         "title": "Waiting time lapsed",
-        "body": "Match Cancelled"
+        "body": "Match Cancelled",
+        "show_in_foreground":true
     },
     "data": {
         "message": "Cancelled",
@@ -421,7 +444,7 @@ router.get('/newtime',(req,res)=>{
     var newmin = date.getSeconds() + sec ;
     date.setSeconds(newmin);
     console.log(date);
-    db.tournamentMatch.find({where:{PlayerOneEmail:"b@c.d" , PlayerTwoEmail:"a@b.c" }})
+    db.tournamentMatch.find({where:{PlayerOneEmail:"domil@g.com" , PlayerTwoEmail:"sg1@sg.com" }})
     .then(function(match){
         if(match){
         console.log('starttimedate', match.startTime);
@@ -440,14 +463,14 @@ router.get('/newtime',(req,res)=>{
 
 
 
-var a =3;
+var a=3;
 console.log(a);
 setInterval(function(){
     // var startDate = '2018-08-04 12:30:00';
     // var endDate = '2018-08-04 12:35:00';
      var startDate = new Date().toISOString();
      var endDate = new Date();
-     endDate.setSeconds(endDate.getSeconds() + 30);
+     endDate.setSeconds(endDate.getSeconds() + 300);
      endDate = endDate.toISOString()
     console.log(`start Date ${startDate} endDate is ${endDate}`);
     //var startDate = new Date('2018-08-23T18:00:00.0000000+00:00')
@@ -480,7 +503,9 @@ then(function(results){
              var data1 = {
     "notification":{
         "title": "Open Match",
-        "body": " Tournament Match"
+        "body": " Tournament Match",
+        "sound": "default",
+        "show_in_foreground":true
     },
     "data": {
         "message":"Accepted",
@@ -502,9 +527,75 @@ then(function(results){
         }
     })
 })
-},30000);
+},300000);
 
 
+setInterval(function(){
+    // var startDate = '2018-08-04 12:30:00';
+    // var endDate = '2018-08-04 12:35:00';
+     var startDate = new Date().toISOString();
+     var endDate = new Date();
+     endDate.setSeconds(endDate.getSeconds() + 120);
+     endDate = endDate.toISOString()
+    console.log(`start Date ${startDate} endDate is ${endDate}`);
+    //var startDate = new Date('2018-08-23T18:00:00.0000000+00:00')
+    // db.tournamentMatch.findAll({attributes:['id','PlayerOneEmail','PlayerTwoEmail','startTime'],where:{
+    // startTime: {
+    //     $between: ['2018-08-22', '2018-08-25']
+    // }
+ //}}).
+ db.orm.query(`SELECT id,PlayerOneEmail,PlayerTwoEmail,startTime FROM tournamentMatches WHERE startTime BETWEEN '${startDate}' AND '${endDate}'` , { model: db.tournamentMatch }).
+then(function(results){
+    console.log('getting results');
+    var results = JSON.stringify(results);
+    console.log(JSON.parse(results));
+    results = JSON.parse(results);
+    results.map(function(match){
+        if(match.PlayerOneEmail!=null && match.PlayerTwoEmail!=null){
+            return Promise.all([
+	   db.StoreDeviceId.find({where:{userEmail:match.PlayerOneEmail}}),
+	   db.StoreDeviceId.find({where:{userEmail:match.PlayerTwoEmail}})		
+        ])
+        .then(function(deviceid){
+        console.log('deviceids ********', deviceid);
+        if(deviceid.length <2){
+            let list1 = {message:'Unable to notify both users'};
+            console.log(js2xmlparser.parse("Result", list1));
+        }else{
+            var deviceId = [];
+             deviceId.push(deviceid[0].deviceId);
+            deviceId.push(deviceid[1].deviceId);
+             var data1 = {
+    "notification":{
+        "title": "Open Match",
+        "body": " Tournament Match",
+        "show_in_foreground":true,
+        "sound": "default"
+    },
+    "android":{
+        "ttl":"120s"
+    },
+    "data": {
+        "message":"Accepted",
+        "room":match.id,
+        "startTime": match.startTime,
+        "players":[match.PlayerOneEmail,match.PlayerTwoEmail]
+         
+    }
+} 
+        sendToAll2(data1, deviceId,null);  
+          
+        }
+        
+      
+        })
+        }
+        else{
+            console.log('Either 1 or both are null');
+        }
+    })
+})
+},120000);
 
 
 

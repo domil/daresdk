@@ -57,22 +57,35 @@ function getFees(tournamentId){
 
 //playerId, gameKey, tournamentId,  
 router.post('/join',jwtauth,(req,res)=>{
-	 var type = req.query.type;
-	 if(req.query.leagueId){
-       leaguejs.joinLeague(req,res);
-	 } else{
-		 joinTournament(req,res);
+	 var type = req.query.id;
+	 if(type[0] == 'l'){
+       leaguejs.joinLeague(req,res,type);
+	 } else if(type[0] == 't'){
+		 joinTournament(req,res,type);
+	 }
+	 else{
+		let output= {status:false,message:"Invalid id"};
+		res.send(js2xmlparser.parse("Balance", output));  
 	 }
 })
 
 
-function joinTournament(req,res){
+function joinTournament(req,res,type){
 	var balance; var fee;
 	var playerId = req.userData.email;
 	var gameKey = req.query.gameKey;
-	var tournamentId = req.query.tournamentId;
+	//var tournamentId = req.query.tournamentId;
+	var tournamentId = type;
+	console.log('joining league,', tournamentId,playerId)
 	//var mykey = crypto.createDecipher('aes-128-cbc', 'mypassword');
 	//let mystr = mykey.update(req.query.gameKey, 'hex', 'utf8') + mykey.final('utf8')        
+	db.Participant.find({where:{PublisherTempEmail:playerId, TournamentTournamentId:tournamentId}})
+	.then(function(participation){
+	if(participation){
+		let list = {result:"You have already registered." }
+		res.send(js2xmlparser.parse("Result", list));
+
+	}else{	
 	return Promise.all([
 	getBalance(playerId),
 	getFees(tournamentId)
@@ -92,6 +105,8 @@ function joinTournament(req,res){
             res.send(js2xmlparser.parse("Balance", output));  
 		}
 	})
+}
+})
 	.catch(function(error){
 		console.log('some error is coming', error);
 		let output= {status:false,message:'You are unable to join this tournament'};
@@ -191,6 +206,8 @@ function tournamentScore(req,res){
 	})
 
 }
+
+
 
 exports.router = router;
 exports.tournamentScore = tournamentScore;

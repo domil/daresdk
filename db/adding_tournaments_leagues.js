@@ -1,12 +1,13 @@
 var db = require('./db.js');
 var bluebird = require('bluebird');
-
+var Sequelize = require('sequelize')
+const Op = Sequelize.Op;
 var express= require('express');
 
 var tournament1=  {
 	gameId:"Mario@domilgarg37@gmail.com",
-	tournamentId: "tournament1",
-	tournamentName:"Knockout Competitors",
+	tournamentId: "tournament2",
+	tournamentName:"Knockout Competitors got it",
 	 payout:"300 200 50",
 	status:"Upcoming",
 	startTime:"28 August 2018 18:00:00",
@@ -14,23 +15,41 @@ var tournament1=  {
 	fee:40,
 	winners:"if any",
 	rules:"tournament will be conducted between 6 and 9 pm ",
-	registrationEndDate:"22 August 2018 18:00:00"
+	registrationEndDate:"22 August 2020 18:00:00"
 };
 
 var league1= {
 	gameId:"Mario@domilgarg37@gmail.com",
+	endTime:"31 August 2019 18:00:00",
+	totalParticipants:10000,
    leagueId: "league1",
-   leagueName: "Compete",
+   leagueName: "Beat the Masters",
    payout: "300 20 10",
-   fee:100,
+   fee:40,
    status:"Upcoming",
-   startTime:"24 August 2018 18:00:00",
-   spotsLeft:40,
+   startTime:"31 August 2018 18:00:00",
+   spotsLeft:100000,
    winners:"if any",
    rules:"Play at your pace but within timelines",
-   registrationEndDate:"12 August 2018 18:00:00"
+   registrationEndDate:"30 August 2018 18:00:00"
 };
 
+var game = {
+	gameId:"Endless@domilgarg37@gmail.com",
+	publisherId:"domilgarg37@gmail.com",
+	gameName:"Endless",
+	orientation:"portrait",
+	playersAllowed:"5",
+	genre:"Action,Thriller",
+	gameIcon:"hey amnn",
+	live:true,
+	creationTime:"25 August 2018 22:02:00",
+	gameKey:"033c0382a9e2472b55fcc91162c1b19a4d89c54d58278ebefe3c42d8d1b4cf4c"
+}
+
+//db.GamesDetails.create(game);
+		// db.LeagueDetails.create(league1);
+		// db.Tournament.create(tournament1);
 //a@b.com
 //b@c.com
 // var participants  = {
@@ -49,31 +68,21 @@ var league1= {
 // })  
 
 
-db.LeagueDetails.find({fee:200})
-.then(function(league){
-	league.updateAttributes({registrationEndDate:"1 Jan 2020 12:00:00"})
-})
-
-
-// return Promise.all([
-// 	db.Tournament.create(tournament1),
-// 	db.LeagueDetails.create(league1)
-// ])
-// .then(function(results){
-// 	console.log("added ***********");
-// 	console.log(results);
-// 	 return db.TournamentDetails.find({where:{
-// 		tournamentId:"tournament1"
-// 	}})
-// })
-// .then(function(tournament){
-// 	console.log('****************');
-// 	console.log(tournament);
+// db.LeagueDetails.find({fee:200})
+// .then(function(league){
+// 	league.updateAttributes({registrationEndDate:"1 Jan 2020 12:00:00"})
 // })
 
-// db.Dare.findAll({where:{fromEmail:"a@b.c"}})
-// .then(function(result){
-// 	console.log(result);
-// })
-
+var query = 'a';
+db.PlayerGame.findAll({attributes: ['country'],include:[{model:db.PublisherTemp,as:'user',attributes:['username','email']}],where:{userEmail:{[Op.like]: query+'%'},gameID: "Mario@domilgarg37@gmail.com"}})
+ .then(function(players){
+    console.log('**********************');
+			var players=JSON.stringify(players);
+			players=JSON.parse(players);
+			console.log(players);
+		 })
+ .catch(function(error){
+   console.log(error);
+   res.send('Some error');
+ })
 

@@ -5,13 +5,102 @@ var async = require('async');
 var uuid = require('uuid/v4');
 var js2xmlparser = require("js2xmlparser");
 
+
+function updateMatch(parameters,res){
+  // If the tournament is completed
+    // you can't do anything anymore
+  // otherwise you can update the stuff
+ console.log('inside update match will work on it. Go on');
+  // var updateMatch = req.body[0];
+  // var updateWinner = req.body[1];
+  // var matchIndex = req.body[2];
+  var updateMatch = parameters[0];
+  var updateWinner = parameters[1];
+  var matchIndex = parameters[2];
+
+
+  //var numberRounds = req.body[3];
+
+  //console.log(numberRounds);
+
+  return db.tournamentMatch.find( { where: { id: updateMatch.id } })
+  .then(function (match) {
+    if(updateWinner.id != match.PlayerOneEmail && updateWinner.id != match.PlayerTwoEmail){
+      //res.status(403).send("This player was not part of this match");
+      console.log('player is not playing in this match');
+      return;
+    }
+    else {
+
+    match.WinnerEmail = updateWinner.id;
+    match.status = "Completed";
+    match.save();
+
+    // if final round
+    return db.Tournament.find({where : {tournamentId : match.TournamentTournamentId}})
+    .then(function(tournament){
+
+    if ( match.round === tournament.rounds ) {
+      // update tournament
+      // then you need to update the state of the tournament to COMPLETED
+      // and set the tournament winner to the person's name
+
+      console.log("It's the final round");
+        tournament.winners = match.WinnerEmail; 
+        tournament.status = "Completed";
+        tournament.save();
+      
+        //res.status(200).send(tournament);
+      return;
+    }
+   else {
+
+      //Once the winner is selected, then it needs to go into the parent match
+      return db.tournamentMatch.find( { where: { id: match.ParentId } })
+      .then(function (nextMatch) {
+
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("matchIndex is: ", matchIndex);
+
+        if ( nextMatch.PlayerOneEmail == null ) {
+          nextMatch.PlayerOneEmail = match.WinnerEmail;
+          nextMatch.save();
+        } else {
+          nextMatch.PlayerTwoEmail = match.WinnerEmail;
+          nextMatch.save();
+        }
+
+      })
+      .then(function(){
+        return db.tournamentMatch.findAll({include: [
+        db.Tournament, 
+        { model: db.PublisherTemp, as: 'Winner' },
+        { model: db.PublisherTemp, as: 'PlayerOne' },
+        { model: db.PublisherTemp, as: 'PlayerTwo' }
+        ]})
+        .then(function(matches){
+         // res.status(200).send(matches);
+         return ;
+        })
+        .catch(function(error){
+          console.log('Something went wrong', error);
+          return ;
+        });
+      });
+      
+    }
+  })
+  }
+
+  });
+}
 module.exports = {
 
   
   allMatches: function(req, res, next) {
     console.log('Hey I am running');
     db.tournamentMatch.findAll({
-      attributes:{exclude:['createdAt', 'updatedAt',,'PlayerOneEmail','PlayerTwoEmail']},
+      attributes:{exclude:['createdAt', 'updatedAt','PlayerOneEmail','PlayerTwoEmail']},
       include: [
       //db.Tournament, 
       { model: db.PublisherTemp, as: 'Winner',attributes:['username','email'] },
@@ -49,92 +138,7 @@ module.exports = {
   },
 
   //updateMatch: function(req, res, next) {
-   updateMatch: function(parameters){
-    // If the tournament is completed
-      // you can't do anything anymore
-    // otherwise you can update the stuff
-   console.log('inside update match will work on it. Go on');
-    // var updateMatch = req.body[0];
-    // var updateWinner = req.body[1];
-    // var matchIndex = req.body[2];
-    var updateMatch = parameters[0];
-    var updateWinner = parameters[1];
-    var matchIndex = parameters[2];
-
-
-    //var numberRounds = req.body[3];
-
-    //console.log(numberRounds);
-
-    return db.tournamentMatch.find( { where: { id: updateMatch.id } })
-    .then(function (match) {
-      if(updateWinner.id != match.PlayerOneEmail && updateWinner.id != match.PlayerTwoEmail)
-        res.status(403).send("This player was not part of this match");
-      else {
-
-      match.WinnerEmail = updateWinner.id;
-      match.status = "Completed";
-      match.save();
-
-      // if final round
-      return db.Tournament.find({where : {tournamentId : match.TournamentTournamentId}})
-      .then(function(tournament){
-
-      if ( match.round === tournament.rounds ) {
-        // update tournament
-        // then you need to update the state of the tournament to COMPLETED
-        // and set the tournament winner to the person's name
-
-        console.log("It's the final round");
-          tournament.winners = match.WinnerEmail; 
-          tournament.status = "Completed";
-          tournament.save();
-        
-          res.status(200).send(tournament);
-        
-      }
-     else {
-
-        //Once the winner is selected, then it needs to go into the parent match
-        return db.tournamentMatch.find( { where: { id: match.ParentId } })
-        .then(function (nextMatch) {
-
-          console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-          console.log("matchIndex is: ", matchIndex);
-
-          if ( matchIndex % 2 !== 0 ) {
-            nextMatch.PlayerOneEmail = match.WinnerEmail;
-            nextMatch.save();
-          } else {
-            nextMatch.PlayerTwoEmail = match.WinnerEmail;
-            nextMatch.save();
-          }
-
-        })
-        .then(function(){
-          return db.tournamentMatch.findAll({include: [
-          db.Tournament, 
-          { model: db.PublisherTemp, as: 'Winner' },
-          { model: db.PublisherTemp, as: 'PlayerOne' },
-          { model: db.PublisherTemp, as: 'PlayerTwo' }
-          ]})
-          .then(function(matches){
-           // res.status(200).send(matches);
-           return ;
-          })
-          .catch(function(error){
-            console.log('Something went wrong', error);
-            return ;
-          });
-        });
-        
-      }
-    })
-    }
-
-    });
-
-  },
+   updateMatch: updateMatch,
 
   createMatch: function (round, parentId, tournamentId) {
     var sessionTime = 10;
@@ -317,36 +321,57 @@ module.exports = {
                   }
                 }
 
-                for ( var i = 0; i < firstRoundMatches.length; i++ ) {
+                for ( var i=0; i<firstRoundMatches.length;i++ ) {
                   
                   var playerOne = null;
                   var playerTwo = null;
 
                   if ( players.length > 0 ) {
                     playerOne = players.shift();
-                  }
-
-                  if ( players.length > 0 ) {
-                    playerTwo = players.shift();
-                  }
-
-                  if ( playerOne && playerTwo ) {                  
-                    firstRoundMatches[i].updateAttributes({ 
-                      PlayerOneEmail: playerOne.dataValues.PublisherTempEmail,
-                      PlayerTwoEmail: playerTwo.dataValues.PublisherTempEmail
-                    });
-                  } else if (playerOne || playerTwo ) {
                     firstRoundMatches[i].updateAttributes({ 
                       PlayerOneEmail: playerOne.dataValues.PublisherTempEmail
-                    });
-                  } else {
-                    
-                    // var parentId = firstRoundMatches[i].ParentId;
-                    // abandonedParents.push(parentId);
-                    firstRoundMatches[i].destroy();
-                  }    
+                    })
+                  }
+                  
+                  // if ( players.length > 0 ) {
+                  //   playerTwo = players.shift();
+                  // }
+
+                  // if ( playerOne && playerTwo ) {                  
+                  //   firstRoundMatches[i].updateAttributes({ 
+                  //     PlayerOneEmail: playerOne.dataValues.PublisherTempEmail,
+                  //     PlayerTwoEmail: playerTwo.dataValues.PublisherTempEmail
+                  //   });
+                  // } else if (playerOne || playerTwo ) {
+                  //   firstRoundMatches[i].updateAttributes({ 
+                  //     PlayerOneEmail: playerOne.dataValues.PublisherTempEmail
+                  //   });
+                  // } else {
+                  //  // firstRoundMatches[i].destroy();
+                  // }    
                     }
                      
+
+                    //for ( var i = 0; i < firstRoundMatches.length; i++ ) {
+                  async.mapSeries(firstRoundMatches,function(singlematch,callback){  
+                    var playerTwo = null;
+                    console.log('in mapSeries', singlematch.PlayerOneEmail);
+                      if ( players.length > 0 ) {
+                        playerTwo = players.shift();
+                        singlematch.updateAttributes({ 
+                          PlayerTwoEmail: playerTwo.dataValues.PublisherTempEmail
+                        })
+                        callback();
+                      }
+                      else if(players.length ==0){
+                        var parameter = [{id:singlematch.id},{id:singlematch.PlayerOneEmail},2]
+                        updatematchmain(parameter)
+                        .then(function(a){
+                          callback();
+                        })
+                      }
+                    })
+                   // }
                         res.status(200).send(matches);
                      
                 // send the results
@@ -367,3 +392,43 @@ module.exports = {
 
 
 };
+
+
+function updatematchmain(parameter){
+  return new Promise(function(resolve,reject){
+  console.log('in updatematchmain function');
+   var updatematch = parameter[0];
+   var winnerid = parameter[1];
+   var matchindex = parameter[2];
+   db.tournamentMatch.find({where:{id:updatematch.id}})
+   .then(function(match){
+     db.tournamentMatch.find( { where: { id: match.ParentId } })
+    .then(function (nextMatch) {
+      if(nextMatch){
+        if(nextMatch.PlayerOneEmail == null){
+          console.log('in if ', winnerid.id);
+          //return new Promise(function(resolve,reject){
+            nextMatch.updateAttributes({PlayerOneEmail: winnerid.id})
+            .then(function(err,body){
+              console.log('successfully updated');
+               //if(err) reject();
+              resolve(2)});
+         // })
+           
+        }else{
+          console.log('in else ', winnerid.id);
+          console.log('successfully updated');
+          // nextMatch.PlayerTwoEmail = winnerid.id;
+          // nextMatch.save();
+         // return new Promise(function(resolve,reject){
+            nextMatch.updateAttributes({PlayerTwoEmail: winnerid.id})
+            .then(function(err){
+             //  if(err) reject();
+              resolve(2)});
+         // })
+        }
+      }
+    })
+   })
+  })  
+}

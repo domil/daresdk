@@ -29,37 +29,12 @@ var Sequelize = require('sequelize');
 
 // Google cloud sequelize connection local
 
-// const orm = new Sequelize('sdk', 'domil', 'qwert12345', {
-//   //timezone:'+05:30',
-//   host: '127.0.0.1',
-//   dialect: 'mysql',
-//   operatorsAliases: false,
-
-//   pool: {
-//     max: 5,
-//     min: 0,
-//     acquire: 30000,
-//     idle: 10000
-//   },
-// });
-
-// var timeExp = orm.define('timeExp',{
-//   startTime: { 
-//     type: Sequelize.DATE, 
-//          defaultValue: Sequelize.NOW 
-// }
-// })
-
-
-// google cloud connection after deployed on cloud
 const orm = new Sequelize('sdk', 'domil', 'qwert12345', {
-  // host: '10.128.0.2',
-host:'localhost', 
- dialect: 'mysql',
+  //timezone:'+05:30',
+  host: '127.0.0.1',
+  dialect: 'mysql',
   operatorsAliases: false,
-  dialectOptions: {
-      socketPath: '/cloudsql/daressdk:asia-south1:daresdk'
-      },
+
   pool: {
     max: 5,
     min: 0,
@@ -67,6 +42,24 @@ host:'localhost',
     idle: 10000
   },
 });
+
+
+// google cloud connection after deployed on cloud
+// const orm = new Sequelize('sdk', 'domil', 'qwert12345', {
+//   // host: '10.128.0.2',
+// host:'localhost', 
+//  dialect: 'mysql',
+//   operatorsAliases: false,
+//   dialectOptions: {
+//       socketPath: '/cloudsql/daressdk:asia-south1:daresdk'
+//       },
+//   pool: {
+//     max: 5,
+//     min: 0,
+//     acquire: 30000,
+//     idle: 10000
+//   },
+// });
 
 
 
@@ -97,13 +90,24 @@ var PublisherTemp= orm.define('PublisherTemp',{
   username:{ type: Sequelize.STRING, allowNull: false, unique: true},
   password: { type: Sequelize.STRING, allowNull: false },
   token :{type: Sequelize.INTEGER, allowNull: false}
-})
+//   mobile:{type: Sequelize.INTEGER, allowNull: true},
+//   avatar:{type: Sequelize.STRING, allowNull: true},
+//   country:{type: Sequelize.STRING, allowNull: true},
+//   gender:{type: Sequelize.ENUM("Other","Female","Male"), allowNull: true},
+//   dob:{type: Sequelize.DATE, 
+//     defaultValue: Sequelize.NOW , allowNull: true, unique: false}
+ })
+
 
 
 var Balance = orm.define('Balance',{
   balance:{type:Sequelize.INTEGER, allowNull:false, defaultValue:0}  
 })
 
+var Ledger = orm.define('Ledger',{
+  parentId:{type: Sequelize.STRING, allowNull: false,},
+  money:{type:Sequelize.INTEGER, allowNull:false, defaultValue:0}  
+})
 
 var tournamentMatch = orm.define('tournamentMatch', {
   id:{type: Sequelize.STRING, allowNull: false, unique: true,primaryKey:true },
@@ -183,7 +187,7 @@ var PlayerGame = orm.define('PlayerGame', {
 
 var GamesDetails = orm.define('GamesDetails',{
   gameId:{type: Sequelize.STRING, allowNull: false, unique: true,primaryKey:true },
-  publisherId:{ type: Sequelize.STRING, allowNull: false, unique: true },
+  publisherId:{ type: Sequelize.STRING, allowNull: false },
   gameName:{ type: Sequelize.STRING, allowNull: false},
   orientation:{ type: Sequelize.STRING, allowNull: true},
   playersAllowed:{ type: Sequelize.STRING, allowNull: false},
@@ -244,6 +248,9 @@ var Tournament = orm.define('Tournament',{
          defaultValue: Sequelize.NOW 
     }})
 
+    // Items needed to be added
+// total participants
+// endTime
 var LeagueDetails = orm.define('LeagueDetails',{
    gameId:{type: Sequelize.STRING, allowNull: false },
    leagueId: {type: Sequelize.STRING, allowNull: false, unique: true,primaryKey:true },
@@ -255,9 +262,14 @@ var LeagueDetails = orm.define('LeagueDetails',{
          type: Sequelize.DATE, 
          defaultValue: Sequelize.NOW 
     },
+    endTime: { 
+      type: Sequelize.DATE, 
+      defaultValue: Sequelize.NOW 
+ },
    spotsLeft:{type: Sequelize.INTEGER, allowNull: false },
    winners:{type: Sequelize.STRING, allowNull: true },
    rules:{type: Sequelize.STRING, allowNull: false },
+   totalParticipants:{type: Sequelize.INTEGER, allowNull: false },
    registrationEndDate: { 
          type: Sequelize.DATE, 
          defaultValue: Sequelize.NOW 
@@ -271,7 +283,8 @@ var Dare = orm.define('Dare', {
          defaultValue: Sequelize.NOW 
     },
     dareAmount:{type:Sequelize.INTEGER, allowNull:false},
-    gameId: { type: Sequelize.STRING, allowNull: false }
+    gameId: { type: Sequelize.STRING, allowNull: false },
+    matchId: { type: Sequelize.STRING, allowNull: true }
 })
 
 var Participant = orm.define('Participant', {
@@ -284,6 +297,7 @@ tournamentMatch.belongsTo(PublisherTemp, { as: 'PlayerOne'});
 tournamentMatch.belongsTo(PublisherTemp, { as: 'PlayerTwo'});
 tournamentMatch.belongsTo(PublisherTemp, { as: 'Winner'});
 LeagueScore.belongsTo(PublisherTemp, {as:'user'});
+Ledger.belongsTo(PublisherTemp, {as:'user'});
 LeagueScore.belongsTo(LeagueDetails, {as:'league'});
 Participant.belongsTo(Tournament);
 Participant.belongsTo(PublisherTemp);
@@ -313,6 +327,7 @@ Promise.all([
   PlayerGame.sync();
   LeagueScore.sync();
    Participant.sync();
+   Ledger.sync();
   return PublisherDetails.sync();
   
 })

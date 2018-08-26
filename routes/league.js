@@ -9,10 +9,12 @@ var uuid = require('uuid/v4');
 var router = express.Router();
 
 //router.get('/register',jwtauth,(req,res)=>{
-function joinLeague(req,res){
+function joinLeague(req,res,type){
 	var registrationTime = new Date();
 	var user = req.userData.email;
-	var leagueId = req.query.leagueId;
+	//var leagueId = req.query.leagueId;
+	var leagueId = type;
+	console.log('joining league,', leagueId,user)
 	db.LeagueScore.find({where:{userEmail:user, leagueLeagueId:leagueId}})
 	.then(function(joined){
 		if(joined){
@@ -129,7 +131,7 @@ function leagueScore(req,res){
 
 router.get('/leaderboard',jwtauth, (req,res)=>{
 	var leagueId = req.query.leagueId;
-	db.LeagueScore.findAll({where:{leagueLeagueId:leagueId},limit:10,order:[[db.orm.col('maxScore'),'DESC'],['maxScoreTime']],attributes:["maxScore","maxScoreTime"],include:[{model:db.PublisherTemp,as:'user',attributes:['username','email']}]})
+	db.LeagueScore.findAll({where:{leagueLeagueId:leagueId},limit:10000,order:[[db.orm.col('maxScore'),'DESC'],['maxScoreTime']],attributes:["maxScore","maxScoreTime"],include:[{model:db.PublisherTemp,as:'user',attributes:['username','email']}]})
 	.then(function(league){
 		if(!league){
 			let list = {status:false,message:"No league registered with this name." }
@@ -142,6 +144,29 @@ router.get('/leaderboard',jwtauth, (req,res)=>{
 		}
 	})
 })
+
+// router('/payout/leagues',(req,res)=>{
+// 	var leagueId = req.query.leagueId;
+// 	var participants;
+// 	db.LeagueDetails.find({where:{leagueId:leagueId}})
+// 	.then(function(ll){
+// 		participants = ll.totalParticipants;
+// 	})
+// 	db.LeagueScore.findAll({where:{leagueLeagueId:leagueId},limit:10000,order:[[db.orm.col('maxScore'),'DESC'],['maxScoreTime']],attributes:["maxScore","maxScoreTime"],include:[{model:db.PublisherTemp,as:'user',attributes:['username','email']}]})
+// 	.then(function(league){
+// 		if(league){
+// 			if(participants == 10000){
+// 				league[0] = 2500;
+// 				league[1] = 1500;
+// 				league[2] = 1000;
+// 			}else if(participants == 20000){
+
+// 			}else if(participants == 5000){
+
+// 			}
+// 		}
+// 	})
+// })
 
 exports.joinLeague = joinLeague;
 exports.router = router;

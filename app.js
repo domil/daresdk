@@ -20,6 +20,17 @@ var convert=require("xml-js");
 var options = {compact: true, ignoreComment: true, spaces: 4};
 var js2xmlparser = require("js2xmlparser");
 var crypto = require('crypto');
+const ejs = require('ejs');
+var paypal = require('paypal-rest-sdk');
+const path = require('path');
+
+
+paypal.configure({
+  'mode': 'sandbox', //sandbox or live
+  'client_id': 'AZFkRmvOZTA_8whe0aX8iETxfkvf4xR_pql29v4lRBdVpPpwQ4q7S0ZXo1mXU20Fo7RZproR4FVimwTT',
+  'client_secret': 'EOrOsepW32jVRxY7vn-Eugc-czgzJbNnxiZU9hKEml34cm-mx0gf46EuDQab1VhvFndViQizi5pWdO4_'
+});
+
 
 var app= express();
 app.use(bodyparser.json());
@@ -31,7 +42,8 @@ app.use('/stream',android);
 app.use('/matches',matchroutes);
 app.use('/join', join);
 app.use('/league', league.router);
-
+app.set('view engine','ejs');
+app.set('views', path.join(__dirname, 'views'))
 
 app.use('/participants', participants);
 app.use('/tournament', tournament.router);
@@ -89,7 +101,10 @@ db.PublisherTemp.findOrCreate({ where: {
                                   email: email, 
                                   password: password,
                                   username:username,
-                                  token:rand } })
+                                  token:rand,
+                                // country:"India",
+                                // avatar:"https://storage.googleapis.com/streaming-208913/15315658879531.jpg"
+                                 } })
     
     .then(function (publisher) {
       db.Balance.create({userEmail:email});
@@ -144,8 +159,10 @@ app.post('/login',(req,res)=>{
          let output1={ Authenticated: true, token: token1,username:publisher.username};
        // res.send(convert.js2xml(output1, options));
          if (req.query.gameKey) {
+           console.log('in login api call')
            var mykey = crypto.createDecipher('aes-128-cbc', 'mypassword');
            let mystr = mykey.update(req.query.gameKey, 'hex', 'utf8') + mykey.final('utf8')
+           console.log(mystr);
            if(req.query.deviceId){
              let deviceinfo = {
                 deviceId:req.query.deviceId,
@@ -390,6 +407,105 @@ app.get('/verify',function(req,res){
     res.send("<h1>Request is from unknown source");
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+// paypal integration
+app.get('/pay', (req, res) => {
+ // var amount = 400;
+  console.log('req--',req)
+  console.log('reqquery--',req.query)
+  console.log('in pay ', req.body);
+  var amount1= req.query.amount*1.2;
+  var userEmail = req.query.email;
+const create_payment_json = {
+  "intent": "sale",
+  "payer": {
+      "payment_method": "paypal"
+  },
+  "redirect_urls": {
+      "return_url": `https://daressdk.appspot.com/success?amount=${req.query.amount}&email=${userEmail}`,
+      "cancel_url": "https://daressdk.appspot.com/cancel"
+  },
+  "transactions": [{
+      "item_list": {
+          "items": [{
+              "name": "Add Wallet Balance",
+              "sku": "001",
+              "price": `${amount1}`,
+              "currency": "INR",
+              "quantity": 1
+          }]
+      },
+      "amount": {
+          "currency": "INR",
+          "total": `${amount1}`
+      },
+      "description": "Add money to my wallet"
+  }]
+};
+
+paypal.payment.create(create_payment_json, function (error, payment) {
+if (error) {
+    throw error;
+} else {
+    console.log(payment);
+   // res.send('test successful');
+    for(let i = 0;i < payment.links.length;i++){
+      if(payment.links[i].rel === 'approval_url'){
+        res.redirect(payment.links[i].href);
+      }
+    }
+}
+});
+});
+
+
+app.get('/success', (req, res) => {
+  var amount1 = req.query.amount;
+  var amount2 = amount1*1.2;
+  const payerId = req.query.PayerID;
+  const paymentId = req.query.paymentId;
+  var userEmail = req.query.email;
+  const execute_payment_json = {
+    "payer_id": payerId,
+    "transactions": [{
+        "amount": {
+            "currency": "INR",
+            "total": `${amount2}`
+        }
+    }]
+  };
+  console.log('in success', execute_payment_json);
+  paypal.payment.execute(paymentId, execute_payment_json, function (error, payment) {
+    if (error) {
+        console.log(error);
+        throw error;
+    } else {
+        console.log(JSON.stringify(payment));
+        db.Balance.find({where:{userEmail:userEmail}})
+    .then(function(user){
+        var updatedBalance = Number(user.balance) + Number(amount1) ; 
+        user.updateAttributes({balance:Number(updatedBalance)});
+        let output= {balance:updatedBalance}
+	//res.send(convert.js2xml(output, options));
+     res.send(js2xmlparser.parse("Balance", output));  
+    })
+        //res.send('Success');
+    }
+});
+});
+
+app.get('/cancel', (req, res) => res.send('Cancelled'));
+
 
 var port = process.env.PORT || 1337;
 app.listen(port,() => {
